@@ -107,17 +107,185 @@ Paste a sample of your recommender's output here as a text block so a reader can
 #   3. ...
 ```
 
-**Screenshot or video** *(optional)*: <!-- Insert a screenshot or demo video link here -->
+TOP 5 RECOMMENDATIONS  (23 songs scanned)
+Profile: lofi / focused
+============================================================
+────────────────────────────────────────────────────────────
+#1  Focus Flow
+    LoRoom · lofi · focused
+    Score: 0.99 / 1.00  ████████████████████
+    Why:
+      • genre match (lofi) +0.20
+      • mood match (focused) +0.20
+      • energy close to target +0.15
+      • valence close to target +0.08
+      • acousticness close to target +0.07
+      • danceability close to target +0.04
+      • tempo_bpm close to target +0.04
+      • speechiness close to target +0.08
+      • instrumentalness close to target +0.07
+      • popularity close to target +0.04
+      • duration_sec close to target +0.03
+────────────────────────────────────────────────────────────
+#2  Midnight Coding
+    LoRoom · lofi · chill
+    Score: 0.88 / 1.00  ██████████████████░░
+    Why:
+      • genre match (lofi) +0.20
+      • mood related (chill ~ focused) +0.10
+      • energy close to target +0.15
+      • valence close to target +0.08
+      • acousticness close to target +0.07
+      • danceability close to target +0.04
+      • tempo_bpm close to target +0.04
+      • speechiness close to target +0.08
+      • instrumentalness close to target +0.07
+      • popularity close to target +0.04
+      • duration_sec close to target +0.03
+────────────────────────────────────────────────────────────
+#3  Library Rain
+    Paper Lanterns · lofi · chill
+    Score: 0.87 / 1.00  █████████████████░░░
+    Why:
+      • genre match (lofi) +0.20
+      • mood related (chill ~ focused) +0.10
+      • energy close to target +0.14
+      • valence close to target +0.08
+      • acousticness close to target +0.06
+      • danceability close to target +0.04
+      • tempo_bpm close to target +0.04
+      • speechiness close to target +0.08
+      • instrumentalness close to target +0.07
+      • popularity close to target +0.04
+      • duration_sec close to target +0.03
+────────────────────────────────────────────────────────────
+#4  Coffee Shop Stories
+    Slow Stereo · jazz · relaxed
+    Score: 0.76 / 1.00  ███████████████░░░░░
+    Why:
+      • genre related (jazz ~ lofi) +0.10
+      • mood related (relaxed ~ focused) +0.10
+      • energy close to target +0.15
+      • valence close to target +0.07
+      • acousticness close to target +0.06
+      • danceability close to target +0.04
+      • tempo_bpm close to target +0.04
+      • speechiness close to target +0.08
+      • instrumentalness close to target +0.07
+      • popularity close to target +0.04
+────────────────────────────────────────────────────────────
+#5  Spacewalk Thoughts
+    Orbit Bloom · ambient · chill
+    Score: 0.72 / 1.00  ██████████████░░░░░░
+    Why:
+      • genre related (ambient ~ lofi) +0.10
+      • mood related (chill ~ focused) +0.10
+      • energy close to target +0.13
+      • valence close to target +0.07
+      • acousticness close to target +0.06
+      • danceability close to target +0.03
+      • tempo_bpm close to target +0.03
+      • speechiness close to target +0.08
+      • instrumentalness close to target +0.06
+      • popularity close to target +0.03
+────────────────────────────────────────────────────────────
 
 ---
 
 ## Experiments You Tried
 
-Use this section to document the experiments you ran. For example:
+ The weights in `recommender.py` sum to 1.0, so I tested genre at 0.10 and 0.40 against the current 0.20, which is the equivalent of the original question.
 
-- What happened when you changed the weight on genre from 2.0 to 0.5
-- What happened when you added tempo or valence to the score
-- How did your system behave for different types of users
+### What happened when I changed the weight on genre?
+
+The #1 song stayed the same for all three profiles at every setting. The only change in which songs made the top 5 came in `pop_happy`:
+
+| Profile | genre = 0.10 | genre = 0.20 (current) | genre = 0.40 |
+|---|---|---|---|
+| pop_happy #3–#5 | Calle Sol, Gym Hero, Bass Cathedral | Gym Hero, Calle Sol, Bass Cathedral | Gym Hero, Calle Sol, Bass Cathedral |
+| pop_happy Gym Hero score | 0.72 | 0.75 | 0.79 |
+| late_night_focus Coffee Shop Stories (jazz) | 0.79 | 0.76 | 0.71 |
+| hip_hop_head #2–#4 | same order | same order | same order |
+
+- **Lower genre weight (0.10):** The non-pop "energetic" and "euphoric" songs (Calle Sol, Bass Cathedral) climbed above Gym Hero, a pop song with the wrong mood. That is arguably a better fit for a "happy" listener.
+- **Higher genre weight (0.40):** Gym Hero stayed ahead and the related-genre jazz song dropped from 0.79 to 0.71, because genre carried more of the score.
+- **Hip hop:** This profile barely moved because the catalog has only four hip hop songs, so a heavier genre weight can't change much.
+
+### What happened when I added or removed tempo and valence?
+
+I removed tempo and valence from each profile to see how much they contribute. The top-5 order did not change for any profile, and scores dropped by 0.00 to 0.04 (for example, `pop_happy` Calle Sol 0.66 to 0.62). Without them, `HUMBLE.` and `No Role Modelz` tied at 0.71 for `hip_hop_head`. They carry only 0.12 of weight combined, and songs within a style cluster have similar tempo and valence, so they act mostly as small tiebreakers.
+
+I also halved the energy weight (0.15 to 0.075). The ranking was identical for all three profiles and scores moved by 0.03 or less, because genre, mood and the other numeric traits already correlate with energy.
+
+### How did the system behave for different types of users?
+
+- **Realistic profiles** (`late_night_focus`, `hip_hop_head`, `pop_happy`): The exact genre and mood match ranked first (0.99 to 1.00), followed by related genres. The results matched my intuition.
+- **Adversarial profiles** (12 edge cases, detailed below): These exposed silent failures (wrong-case or unknown labels and typo'd keys got no warning), ties (a genre-only profile put four hip hop songs at 1.00), inflated scores for profiles with few features, and no input validation (a non-numeric energy value crashed).
+
+**Overall takeaway:** The rankings are stable under reasonable weight changes. The only place a weight change reshuffled the top 5 was `pop_happy` under a different genre weight. That robustness comes partly from the small 23-song catalog, so these experiments say more about the dataset than about the weights.
+
+
+# Stress Testing with Diverse Profiles
+## Edge Case Testing
+
+I ran 12 adversarial profiles through `recommend_songs` (top 3 shown) to look for unexpected behavior.
+"Full" below means the numeric targets from `LATE_NIGHT_FOCUS`.
+
+| # | Profile | Top 3 results (score) | Finding |
+|---|---------|-----------------------|---------|
+| 1 | Full + `genre: "Lofi"` (capital L), mood focused | Focus Flow (0.79), Midnight Coding (0.68), Library Rain (0.67) | Genre match is case-sensitive, so the genre weight is silently lost. Numeric features hid the problem here. |
+| 2 | Full + `genre: "k-pop"`, `mood: "bittersweet"` | Focus Flow (0.59), Midnight Coding (0.58), Library Rain (0.57) | Unknown labels get 0 credit with no warning. Results fall back to numeric features only. |
+| 3 | `{"genre": "pop", "enrgy": 0.9}` (typo) | Sunrise City (1.00), Gym Hero (1.00), Rooftop Lights (0.50) | Typo'd key is ignored. Gym Hero (energy 0.93) and Sunrise City tie at a perfect 1.00. |
+| 4 | `{}` | Sunrise City (0.00), Midnight Coding (0.00), Storm Runner (0.00) | All scores are 0, so the "ranking" is just CSV order. |
+| 5 | `{"genre": "hip hop"}` | Concrete Kingdom (1.00), No Role Modelz (1.00), HUMBLE. (1.00) | Four-way tie, broken by CSV order. |
+
+### Takeaways
+- **Silent failures:** wrong-case labels (1), unknown labels (2), typo'd keys (3) and empty profiles (4) all run without errors but give degraded results.
+- **Inflated scores:** with few features (3, 5, 10) weights are renormalized, so a match on one or two features reaches 1.00. Scores aren't comparable across profiles with different numbers of features.
+- **Ties:** profiles with only categorical keys produce ties broken by CSV order (3, 5).
+- **No validation:** out-of-range numbers (9) are accepted and a non-numeric value (12) crashes.
+- **Possible fixes:** lowercase and strip categorical inputs, warn on unknown keys and labels, clamp numeric targets to their ranges, and add a secondary tiebreaker such as popularity.
+
+1. wrong_case_genre (genre: "Lofi", mood focused, lofi-style numerics)
+
+Focus Flow (lofi/focused) 0.79
+Midnight Coding (lofi/chill) 0.68
+Library Rain (lofi/chill) 0.67
+Coffee Shop Stories (jazz/relaxed) 0.66
+Spacewalk Thoughts (ambient/chill) 0.62
+
+2. unknown_genre_and_mood (k-pop / bittersweet, same numerics)
+
+Focus Flow (lofi/focused) 0.59
+Midnight Coding (lofi/chill) 0.58
+Library Rain (lofi/chill) 0.57
+Coffee Shop Stories (jazz/relaxed) 0.56
+Spacewalk Thoughts (ambient/chill) 0.52
+
+3. typo_key ({"genre": "pop", "enrgy": 0.9})
+
+Sunrise City (pop/happy) 1.00
+Gym Hero (pop/intense) 1.00
+Rooftop Lights (indie pop/happy) 0.50
+Midnight Coding (lofi/chill) 0.00
+Storm Runner (rock/intense) 0.00
+
+4. empty_profile ({})
+
+Sunrise City (pop/happy) 0.00
+Midnight Coding (lofi/chill) 0.00
+Storm Runner (rock/intense) 0.00
+Library Rain (lofi/chill) 0.00
+Gym Hero (pop/intense) 0.00
+
+5. genre_only ({"genre": "hip hop"})
+
+Concrete Kingdom (hip hop/confident) 1.00
+No Role Modelz (hip hop/reflective) 1.00
+HUMBLE. (hip hop/defiant) 1.00
+Ruff Ryders' Anthem (hip hop/aggressive) 1.00
+Velvet Hours (r&b/romantic) 0.50
+
 
 ---
 
@@ -133,6 +301,8 @@ Examples:
 
 You will go deeper on this in your model card.
 
+**explained this in the model card in depth*
+
 ---
 
 ## Reflection
@@ -141,10 +311,6 @@ Read and complete `model_card.md`:
 
 [**Model Card**](model_card.md)
 
-Write 1 to 2 paragraphs here about what you learned:
+Building this showed me that a recommender turns data into predictions by reducing everything to numbers and comparing them. Each song is a row of traits (genre, mood, energy, tempo and so on), the user is a profile of target values, and the "prediction" is a weighted score of how close each song sits to those targets. The weights are where the real decisions hide. Giving genre and mood 40% of the score, for example, quietly defines what the system thinks "your taste" means.(So essentially a decision matrix) My experiments showed how much the data matters too: changing the genre weight barely reordered the results, mostly because the 23-song catalog left few alternatives to rank. The system also never explains itself beyond the traits I chose to score, so it can look confident (a 1.00) when it has only checked one or two features.
 
-- about how recommenders turn data into predictions
-- about where bias or unfairness could show up in systems like this
-
-
-
+Bias and unfairness start with who and what the data includes. My catalog has 23 songs across 17 genres, but 14 of those genres have a single song and hip hop, lofi and pop have most of the rest, so the system works best for listeners whose taste happens to be well represented. A country, folk or classical listener gets one good match and then filler, while a hip hop listener gets a full list. That is not because the model understands them less, but because the data does. Genres that are missing entirely (K-pop was one I tried) get no credit at all, so those listeners are effectively excluded, and nothing in the output tells them why. The same thing happens with people: my profiles assume a user can name one genre and one mood in exactly the spelling I used, which favors users who fit my assumptions and silently penalizes anyone who types a label I didn't anticipate or whose taste doesn't fit a single genre. This can go wrong in real-world products in a similar way: a small or skewed catalog looks like a working system, so the gaps go unnoticed, and the same patterns snowball once listening data is involved. Popular, well-represented genres get more exposure, which generates more data for them, while niche genres, regional music and the listeners who love them become harder to find and are dropped from what gets recommended. A recommender that never shows a group of users their own music can affect that music's audience, and because the exclusion happens without error messages or complaints, nobody is likely to notice it unless they test for it deliberately.
